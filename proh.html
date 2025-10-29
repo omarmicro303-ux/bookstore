@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ar">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>مكتبة أونلاين — متجر الكتب</title>
+  <meta name="description" content="موقع بسيط لبيع الكتب مع بوابة دفع (Stripe Checkout)" />
+  <style>
+    /* === CSS مضمّن (inline) === */
+    :root{--bg:#0f172a;--card:#0b1220;--accent:#06b6d4;--muted:#93c5fd}
+    *{box-sizing:border-box;font-family: 'Segoe UI', Tahoma, Roboto, 'Noto Kufi Arabic', sans-serif}
+    body{margin:0;background:linear-gradient(180deg,#071024 0%, #071a2b 100%);color:#e6eef8;direction:rtl}
+    header{padding:24px 18px;display:flex;align-items:center;justify-content:space-between}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(90deg,#06b6d4,#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700}
+    h1{margin:0;font-size:18px}
+    nav a{color:var(--muted);text-decoration:none;margin-left:12px}
+    main{padding:18px;max-width:1100px;margin:0 auto}
+    .hero{display:flex;gap:18px;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .hero .info{max-width:640px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6);display:flex;flex-direction:column}
+    .cover{height:260px;border-radius:10px;background:#071022;background-size:cover;background-position:center;margin-bottom:10px}
+    .title{font-weight:700;margin-bottom:6px}
+    .meta{font-size:13px;color:#98a7c7;margin-bottom:8px}
+    .price{font-weight:800;margin-top:auto}
+    .btn{display:inline-block;padding:10px 12px;border-radius:10px;background:var(--accent);color:#022;cursor:pointer;text-decoration:none;font-weight:700}
+    .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    footer{padding:18px;text-align:center;color:#93b1d6;font-size:13px}
+    .badge{padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:13px}
+    @media (max-width:640px){.hero{flex-direction:column;align-items:flex-start}}
+    /* modal */
+    .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(2,6,23,0.6);z-index:60}
+    .modal.open{display:grid}
+    .modal .box{background:var(--card);padding:18px;border-radius:12px;max-width:520px;width:95%}
+    .row{display:flex;gap:12px;align-items:center}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">م</div>
+      <div>
+        <h1>مكتبة أونلاين</h1>
+        <div style="font-size:13px;color:#9fb7d9">متجر لبيع الكتب — تصميم جاهز للتعديل</div>
+      </div>
+    </div>
+    <nav>
+      <a href="#books">الكتب</a>
+      <a href="#how">طريقة الدفع</a>
+      <a href="#contact">اتصل بنا</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="info">
+        <div class="badge">توصية الموقع</div>
+        <h2 style="margin:8px 0 10px">مرحبًا بك في موقع بيع الكتب - اشتري كتبك ب أمان تام</h2>
+        <p style="margin:0 0 12px;color:#bcd3f6">هذه الصفحة جاهزة لتعمل كـ“واجهة متجر” لبيع كتب حقيقية. مرفق معها تكامل مع Stripe Checkout (وصف الإعداد في أسفل الصفحة). قم بتغيير التفاصيل، إضافة كتب أكثر، وربط مفتاح Stripe السري في الخادم.</p>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <a class="btn" href="#books">تسوق الآن</a>
+          <a class="btn secondary" href="#how">طريقة الدفع</a>
+        </div>
+      </div>
+      <div style="max-width:320px;text-align:left">
+        <img alt="books" src="https://images.unsplash.com/photo-1528209392018-5a2b1b5f9a1b?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3&s=1e6f7b8f9b1b6e8d3b3c" style="width:100%;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.5)"/>
+      </div>
+    </section>
+    
+
+    <section id="books">
+      <h3 style="margin:6px 0 12px">الكتب المتاحة (حقيقية وقابلة للشراء)</h3>
+      <div class="grid" id="products"></div>
+    </section>
+
+    <section id="how" style="margin-top:18px">
+      <h3>طريقة الدفع المدمجة</h3>
+      <p>هذا النموذج يستخدم Stripe Checkout. من المهم أن تعلم أن إنشاء جلسة Checkout يتطلب مفتاح سري على الخادم. ضمن الملف يوجد كود جافاسكربت يرسل طلبًا إلى نقطة نهاية افتراضية <code>/create-checkout-session</code>. تحت القسم يوجد مثال خادم Node.js (موجود كتعليق) يمكنك تشغيله محليًا أو على خدمة استضافة.</p>
+      <details style="background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;margin-top:10px">
+        <summary style="cursor:pointer">مثال خادم Node.js (استخدم stripe secret key و استبدل PLACEHOLDER)</summary>
+        <pre style="white-space:pre-wrap;margin-top:8px;color:#cfe6ff;background:transparent">// server.js (مثال سريع - احتياج: npm install express stripe)
+// ضع هذا الملف في مجلد منفصل وشغّله: node server.js
+
+/*
+const express = require('express');
+const Stripe = require('stripe');
+const app = express();
+app.use(express.json());
+
+const stripe = Stripe('sk_test_YOUR_SECRET_KEY'); // استبدل بالمفتاح السري من حسابك
+
+const PRODUCTS = {
+  book_1: {price_cents: 899, title: 'The Alchemist - Paulo Coelho'},
+  book_2: {price_cents: 1299, title: 'Atomic Habits - James Clear'},
+  book_3: {price_cents: 3499, title: 'Clean Code - Robert C. Martin'}
+};
+
+app.post('/create-checkout-session', async (req, res) => {
+  const {productId} = req.body;
+  const product = PRODUCTS[productId];
+  if(!product) return res.status(400).json({error:'Unknown product'});
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [{price_data: {currency:'usd',product_data:{name:product.title},unit_amount:product.price_cents},quantity:1}],
+    mode: 'payment',
+    success_url: 'http://localhost:5500/success.html',
+    cancel_url: 'http://localhost:5500/cancel.html'
+  });
+
+  res.json({url: session.url});
+});
+
+app.listen(4242, () => console.log('Server running on http://localhost:4242'));
+*/
+        </pre>
+      </details>
+
+      <p style="margin-top:12px">ملاحظات مهمة:</p>
+      <ul>
+        <li>استعمل مفاتيح اختبار (test) من Stripe أثناء التطوير.</li>
+        <li>اضبط روابط النجاح/الإلغاء (success_url / cancel_url) لتشير لصفحات حقيقية بموقعك.</li>
+        <li>للمتجر الحقيقي تحتاج سياسة إرجاع، صفحة خصوصية، وSSL (HTTPS).</li>
+      </ul>
+    </section>
+
+    <div class="modal" id="modal">
+      <div class="box">
+        <h4 id="modal-title">...</h4>
+        <p id="modal-desc" style="color:#9fb7d9">...</p>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn" id="checkoutBtn">متابعة الدفع</button>
+          <button class="btn secondary" id="closeModal">إغلاق</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer id="contact">
+    © 2025 — مكتبة أونلاين — تم إنشاء الموقع كنموذج. للاستفسار: example@bookstore.test
+  </footer>
+
+  <script>
+    /* === JavaScript مضمّن (inline) === */
+    // بيانات المنتجات (حقيقية) — يمكنك تعديل أو إضافة
+    const PRODUCTS = [
+      {
+        id: 'book_1',
+        title: 'The Alchemist',
+        author: 'Paulo Coelho',
+        price_usd: 8.99,
+        cover: 'https://covers.openlibrary.org/b/id/8231996-L.jpg',
+        desc: 'رواية ملهمة عن الرحلة واكتشاف الذات.'
+      },
+      {
+        id: 'book_2',
+        title: 'Atomic Habits',
+        author: 'James Clear',
+        price_usd: 12.99,
+        cover: 'https://images-na.ssl-images-amazon.com/images/I/513Y5oM9xPL._SX329_BO1,204,203,200_.jpg',
+        desc: 'دليل عملي لتغيير العادات وتحسين الأداء.'
+      },
+      {
+        id: 'book_3',
+        title: 'Clean Code',
+        author: 'Robert C. Martin',
+        price_usd: 34.99,
+        cover: 'https://images-na.ssl-images-amazon.com/images/I/41xShlnTZTL._SX374_BO1,204,203,200_.jpg',
+        desc: 'كتاب أساسي لكل مطور برمجيات عن كتابة أكواد نظيفة.'
+      }
+    ];
+
+    const productsContainer = document.getElementById('products');
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalDesc = document.getElementById('modal-desc');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    const closeModal = document.getElementById('closeModal');
+
+    let selectedProduct = null;
+
+    function renderProducts(){
+      productsContainer.innerHTML = PRODUCTS.map(p=>`
+        <div class="card">
+          <div class="cover" style="background-image:url('${p.cover}')" aria-hidden="true"></div>
+          <div class="title">${p.title}</div>
+          <div class="meta">${p.author}</div>
+          <div style="font-size:14px;color:#bcd3f6">${p.desc}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+            <div class="price">$${p.price_usd.toFixed(2)}</div>
+            <button class="btn" onclick="openBuy('${p.id}')">اشتري الآن</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openBuy(productId){
+      selectedProduct = PRODUCTS.find(p=>p.id===productId);
+      modalTitle.textContent = `شراء: ${selectedProduct.title}`;
+      modalDesc.textContent = `${selectedProduct.author} — السعر: $${selectedProduct.price_usd.toFixed(2)}`;
+      modal.classList.add('open');
+    }
+
+    closeModal.addEventListener('click', ()=> modal.classList.remove('open'));
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) modal.classList.remove('open'); });
+
+    // عند الضغط على متابعة الدفع
+    checkoutBtn.addEventListener('click', async ()=>{
+      if(!selectedProduct) return;
+      // نرسل طلب للخادم لإنشاء جلسة Checkout
+      try{
+        checkoutBtn.textContent = 'جارٍ التحويل...';
+        const res = await fetch('/create-checkout-session', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({productId: selectedProduct.id})
+        });
+        const data = await res.json();
+        if(data.url){
+          // إعادة التوجيه لصفحة الدفع (Stripe Checkout)
+          window.location.href = data.url;
+        } else {
+          alert('حدث خطأ أثناء إنشاء جلسة الدفع — تأكد من تشغيل الخادم وتعيين مفتاح Stripe السري.');
+          checkoutBtn.textContent = 'متابعة الدفع';
+        }
+      }catch(err){
+        console.error(err);
+        alert('فشل الاتصال بالخادم. تأكد من إعداد الخادم المحلي أو استضافة الـ API.');
+        checkoutBtn.textContent = 'متابعة الدفع';
+      }
+    });
+
+    // تشغيل
+    renderProducts();
+
+    // ==== ملاحظات للمطور:
+    // • استبدل نقطة النهاية /create-checkout-session بنقطة النهاية الحقيقية ذات الـ HTTPS على الخادم.
+    // • للتجربة محلياً: شغّل server.js المرفق في التوثيق (أعلى) على منفذ 4242 و اجعل موقعك يعمل على منفذ 5500، أو استخدم ngrok لربطهما.
+    // • تذكر أن تستخدم مفاتيح اختبار Stripe أثناء التطوير.
+
+  </script>
+</body>
+</html>
